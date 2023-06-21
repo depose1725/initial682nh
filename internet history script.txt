@@ -1,0 +1,44 @@
+import sqlite3
+import os
+import datetime
+
+# Path to Chrome History database file
+history_db_path = os.path.expanduser('~/.config/google-chrome/Default/History')
+
+# Connect to the Chrome History database
+connection = sqlite3.connect(history_db_path)
+cursor = connection.cursor()
+
+# Define the start and end dates for the desired date range
+start_date = datetime.date(2017, 5, 23)
+end_date = datetime.date(2023, 5, 23)
+
+# Query the browser history within the date range
+query = f"SELECT url, title, last_visit_time FROM urls WHERE last_visit_time BETWEEN {start_date} AND {end_date} ORDER BY last_visit_time DESC"
+cursor.execute(query)
+history_data = cursor.fetchall()
+
+# Index the browser history by date and time
+indexed_history = {}
+for url, title, last_visit_time in history_data:
+    visit_time = datetime.datetime(1601, 1, 1) + datetime.timedelta(microseconds=last_visit_time)
+    date = visit_time.date()
+    time = visit_time.time()
+    
+    if date not in indexed_history:
+        indexed_history[date] = []
+    
+    indexed_history[date].append((time, url, title))
+
+# Save the indexed history to a file or database
+# Example: Saving to a text file
+output_file = 'indexed_history.txt'
+with open(output_file, 'w') as file:
+    for date, visits in indexed_history.items():
+        file.write(f"{date.strftime('%Y-%m-%d')}:\n")
+        for time, url, title in visits:
+            file.write(f"  {time.strftime('%H:%M:%S')} - {url} - {title}\n")
+        file.write('\n')
+
+# Close the database connection
+connection.close()
